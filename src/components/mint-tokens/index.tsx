@@ -15,6 +15,8 @@ import {
   NetworkDetails,
 } from "../../helpers/network";
 import { ERRORS } from "../../helpers/error";
+
+import { TokenDest } from "./token-destination";
 import { ConnectWallet } from "./connect-wallet";
 
 import "./index.scss";
@@ -35,9 +37,21 @@ export const MintToken = (props: MintTokenProps) => {
   const [connectionError, setConnectionError] = React.useState(
     null as string | null,
   );
+  const [paymentDestination, setPaymentDest] = React.useState("");
+      
 
   function renderStep(step: StepCount) {
     switch (step) {
+      case 2: {
+        const onClick = () => setStepCount((stepCount + 1) as StepCount);
+        return (
+          <TokenDest
+            onClick={onClick}
+            setDestination={setPaymentDest}
+            destination={paymentDestination}
+          />
+        );
+      }
       case 1:
       default: {
         const onClick =
