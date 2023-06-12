@@ -6,6 +6,7 @@ import {
   Layout,
   Notification,
   Profile,
+  Loader
 } from "@stellar/design-system";
 import freighterApi from "@stellar/freighter-api";
 
@@ -15,7 +16,17 @@ import {
   NetworkDetails,
 } from "../../helpers/network";
 import { ERRORS } from "../../helpers/error";
+import {
+  getTxBuilder,
+  BASE_FEE,
+  XLM_DECIMALS,
+  getTokenSymbol,
+  getTokenDecimals,
+  getTokenBalance,
+  getServer
+} from "../../helpers/soroban";
 
+import { TokenInput } from "./token-input";
 import { TokenDest } from "./token-destination";
 import { ConnectWallet } from "./connect-wallet";
 
@@ -37,11 +48,93 @@ export const MintToken = (props: MintTokenProps) => {
   const [connectionError, setConnectionError] = React.useState(
     null as string | null,
   );
+
+  const [isLoadingTokenDetails, setTokenDetails] = React.useState(false);
+
+  // Not using vals yet
+  /* eslint-disable */
+  // @ts-ignore
+  const [tokenId, setTokenId] = React.useState("");
+  // @ts-ignore
+  const [tokenDecimals, setTokenDecimals] = React.useState(XLM_DECIMALS);
   const [paymentDestination, setPaymentDest] = React.useState("");
+  // @ts-ignore
+  const [tokenSymbol, setTokenSymbol] = React.useState("");
+  // @ts-ignore
+  const [tokenBalance, setTokenBalance] = React.useState("");
+  /* eslint-enable */
+
+  async function setToken(id: string) {
+    setTokenDetails(true);
+    setTokenId(id);
+
+    const server = getServer(activeNetworkDetails);
+
+    try {
+      const txBuilderSymbol = await getTxBuilder(
+        activePubKey!,
+        BASE_FEE,
+        server,
+        activeNetworkDetails.networkPassphrase,
+      );
+
+      const symbol = await getTokenSymbol(id, txBuilderSymbol, server);
+      setTokenSymbol(symbol);
+
+      const txBuilderBalance = await getTxBuilder(
+        activePubKey!,
+        BASE_FEE,
+        server,
+        activeNetworkDetails.networkPassphrase,
+      );
+      const balance = await getTokenBalance(
+        activePubKey!,
+        id,
+        txBuilderBalance,
+        server,
+      );
+      setTokenBalance(balance);
+
+      const txBuilderDecimals = await getTxBuilder(
+        activePubKey!,
+        BASE_FEE,
+        server,
+        activeNetworkDetails.networkPassphrase,
+      );
+      const decimals = await getTokenDecimals(id, txBuilderDecimals, server);
+      setTokenDecimals(decimals);
+      setTokenDetails(false);
+
+      return true;
+    } catch (error) {
+      console.log(error);
+      setConnectionError("Unable to fetch token details.");
+      setTokenDetails(false);
+
+      return false;
+    }
+  }
       
 
   function renderStep(step: StepCount) {
     switch (step) {
+      case 3: {
+        if (isLoadingTokenDetails) {
+          return (
+            <div className="loading">
+              <Loader />
+            </div>
+          );
+        }
+        const onClick = async (value: string) => {
+          const success = await setToken(value);
+
+          if (success) {
+            setStepCount((stepCount + 1) as StepCount);
+          }
+        };
+        return <TokenInput onClick={onClick} />;
+      }
       case 2: {
         const onClick = () => setStepCount((stepCount + 1) as StepCount);
         return (
