@@ -15,7 +15,7 @@ export const ConnectWallet = (props: ConnectWalletProps) => {
   return (
     <>
       <Heading as="h1" size="sm">
-        Mint a Token
+        Mint tokens
       </Heading>
       <div className="submit-row">
         <Button
