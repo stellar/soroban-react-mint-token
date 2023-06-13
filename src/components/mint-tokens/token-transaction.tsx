@@ -20,7 +20,7 @@ export const TokenTransaction = (props: TokenInputProps) => {
   return (
     <>
       <Heading as="h1" size="sm">
-        Payment Settings
+        Mint Transaction Settings
       </Heading>
       <Input
         fieldSize="md"
