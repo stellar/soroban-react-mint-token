@@ -20,3 +20,17 @@ body {
   position: absolute;
   width: 375px;
 }
+
+.layout {
+  .submit-row {
+    margin-top: 2rem;
+  }
+}
+
+.Input {
+  margin-bottom: 1rem;
+
+  &:only-child {
+    margin-bottom: 0;
+  }
+}
