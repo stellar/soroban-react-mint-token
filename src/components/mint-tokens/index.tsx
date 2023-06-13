@@ -6,7 +6,7 @@ import {
   Layout,
   Notification,
   Profile,
-  Loader
+  Loader,
 } from "@stellar/design-system";
 import freighterApi from "@stellar/freighter-api";
 
@@ -23,9 +23,10 @@ import {
   getTokenSymbol,
   getTokenDecimals,
   getTokenBalance,
-  getServer
+  getServer,
 } from "../../helpers/soroban";
 
+import { TokenTransaction } from "./token-transaction";
 import { TokenInput } from "./token-input";
 import { TokenDest } from "./token-destination";
 import { ConnectWallet } from "./connect-wallet";
@@ -39,7 +40,8 @@ interface MintTokenProps {
 }
 
 export const MintToken = (props: MintTokenProps) => {
-  const isShowingHeader = props.isShowingHeader === undefined ? true : props.isShowingHeader;
+  const isShowingHeader =
+    props.isShowingHeader === undefined ? true : props.isShowingHeader;
   const [activeNetworkDetails, setActiveNetworkDetails] = React.useState(
     {} as NetworkDetails,
   );
@@ -48,6 +50,9 @@ export const MintToken = (props: MintTokenProps) => {
   const [connectionError, setConnectionError] = React.useState(
     null as string | null,
   );
+
+  const [fee, setFee] = React.useState(BASE_FEE);
+  const [memo, setMemo] = React.useState("");
 
   const [isLoadingTokenDetails, setTokenDetails] = React.useState(false);
 
@@ -114,10 +119,28 @@ export const MintToken = (props: MintTokenProps) => {
       return false;
     }
   }
-      
 
   function renderStep(step: StepCount) {
     switch (step) {
+      case 4: {
+        if (isLoadingTokenDetails) {
+          return (
+            <div className="loading">
+              <Loader />
+            </div>
+          );
+        }
+        const onClick = () => setStepCount((stepCount + 1) as StepCount);
+        return (
+          <TokenTransaction
+            fee={fee}
+            memo={memo}
+            onClick={onClick}
+            setFee={setFee}
+            setMemo={setMemo}
+          />
+        );
+      }
       case 3: {
         if (isLoadingTokenDetails) {
           return (
@@ -195,7 +218,10 @@ export const MintToken = (props: MintTokenProps) => {
       </div>
       <div className="Layout__inset layout">
         <div className="admin-banner-container">
-          <Notification title="Account must be an admin of the token" variant="primary" />
+          <Notification
+            title="Account must be an admin of the token"
+            variant="primary"
+          />
         </div>
         <div className="mint-token">
           <Card variant="primary">
