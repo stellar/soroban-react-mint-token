@@ -297,6 +297,107 @@ export const getTokenBalance = async (
     .build();
 
   const result = await simulateTx(tx, decoders.i128, server);
+
+  console.log("**LOG**");
   return result;
 };
 
+// export const getTokenQuantity = async (
+//   address: string,
+//   tokenId: string,
+//   txBuilder: SorobanClient.TransactionBuilder,
+//   server: SorobanClient.Server,
+// ) => {
+//   const params = [accountToScVal(address)];
+//   const contract = new SorobanClient.Contract(tokenId);
+
+//   console.log("**LOG** getTokenQuantity contract: ", contract);
+
+//   const tx = txBuilder
+//     .addOperation(contract.call("amount", ...params))
+//     .setTimeout(SorobanClient.TimeoutInfinite)
+//     .build();
+
+//   console.log("**LOG** getTokenQuantity tx: ", tx);
+
+//   const result = await simulateTx(tx, decoders.i128, server);
+//   return result;
+// };
+
+export const mintTokens = async ({
+  tokenId,
+  quantity,
+  destinationPubKey,
+  adminPubKey,
+  memo,
+  tokenSymbol,
+  txBuilderAdmin,
+  server,
+  networkPassphrase,
+}: {
+  tokenId: string;
+  quantity: number;
+  destinationPubKey: string; // to
+  adminPubKey: string; // from
+  memo: string;
+  tokenSymbol: string;
+  txBuilderAdmin: SorobanClient.TransactionBuilder;
+  server: SorobanClient.Server;
+  networkPassphrase: string;
+}) => {
+  const contract = new SorobanClient.Contract(tokenId);
+
+  const txBuilderDestination = await getTxBuilder(
+    destinationPubKey!,
+    BASE_FEE,
+    server,
+    networkPassphrase,
+  );
+
+  try {
+    console.log("Establishing the trustline for minting tokens...");
+
+    const trustlineResultTxResult = txBuilderDestination
+      .addOperation(
+        SorobanClient.Operation.changeTrust({
+          asset: new SorobanClient.Asset(tokenSymbol, adminPubKey),
+        }),
+      )
+      .setTimeout(SorobanClient.TimeoutInfinite)
+      .build();
+
+    console.debug("trustlineResultTxResult: ", trustlineResultTxResult);
+  } catch (err) {
+    console.log("Error while establishing the trustline: ", err);
+    console.error(err);
+  }
+
+  try {
+    const tx = txBuilderAdmin
+      .addOperation(
+        contract.call(
+          "transfer",
+          ...[
+            accountToScVal(adminPubKey), // from
+            accountToScVal(destinationPubKey), // to
+            numberToI128(quantity), // quantity
+          ],
+        ),
+      )
+      .setTimeout(SorobanClient.TimeoutInfinite);
+
+    if (memo.length > 0) {
+      tx.addMemo(SorobanClient.Memo.text(memo));
+    }
+
+    const preparedTransaction = await server.prepareTransaction(
+      tx.build(),
+      networkPassphrase,
+    );
+
+    return preparedTransaction.toXDR();
+  } catch (err) {
+    console.log("err");
+    return "error";
+  }
+};
