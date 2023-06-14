@@ -23,9 +23,8 @@ export const TokenQuantity = (props: TokenQuantityProps) => {
       <Heading as="h1" size="sm" addlClassName="title">
         Set Quantity
       </Heading>
-      <Heading size="sm" as="h2" addlClassName="balance">
-        {props.quantity}
-        {props.tokenSymbol}
+      <Heading size="sm" as="h2" addlClassName="quantity">
+        {props.quantity} {props.tokenSymbol}
       </Heading>
       <Input
         fieldSize="md"
@@ -33,8 +32,9 @@ export const TokenQuantity = (props: TokenQuantityProps) => {
         label="Choose quantity to send"
         value={props.quantity}
         onChange={handleChange}
+        type="number"
       />
-      <div className="submit-row-send">
+      <div className="submit-row">
         <Button
           size="md"
           variant="tertiary"

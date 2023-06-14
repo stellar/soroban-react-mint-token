@@ -244,6 +244,7 @@ export const getTokenSymbol = async (
   server: SorobanClient.Server,
 ) => {
   const contract = new SorobanClient.Contract(tokenId);
+
   const tx = txBuilder
     .addOperation(contract.call("symbol"))
     .setTimeout(SorobanClient.TimeoutInfinite)
@@ -268,62 +269,6 @@ export const getTokenName = async (
   return result;
 };
 
-export const getTokenDecimals = async (
-  tokenId: string,
-  txBuilder: SorobanClient.TransactionBuilder,
-  server: SorobanClient.Server,
-) => {
-  const contract = new SorobanClient.Contract(tokenId);
-  const tx = txBuilder
-    .addOperation(contract.call("decimals"))
-    .setTimeout(SorobanClient.TimeoutInfinite)
-    .build();
-
-  const result = await simulateTx<number>(tx, decoders.u32, server);
-  return result;
-};
-
-export const getTokenBalance = async (
-  address: string,
-  tokenId: string,
-  txBuilder: SorobanClient.TransactionBuilder,
-  server: SorobanClient.Server,
-) => {
-  const params = [accountToScVal(address)];
-  const contract = new SorobanClient.Contract(tokenId);
-  const tx = txBuilder
-    .addOperation(contract.call("balance", ...params))
-    .setTimeout(SorobanClient.TimeoutInfinite)
-    .build();
-
-  const result = await simulateTx(tx, decoders.i128, server);
-
-  console.log("**LOG**");
-  return result;
-};
-
-// export const getTokenQuantity = async (
-//   address: string,
-//   tokenId: string,
-//   txBuilder: SorobanClient.TransactionBuilder,
-//   server: SorobanClient.Server,
-// ) => {
-//   const params = [accountToScVal(address)];
-//   const contract = new SorobanClient.Contract(tokenId);
-
-//   console.log("**LOG** getTokenQuantity contract: ", contract);
-
-//   const tx = txBuilder
-//     .addOperation(contract.call("amount", ...params))
-//     .setTimeout(SorobanClient.TimeoutInfinite)
-//     .build();
-
-//   console.log("**LOG** getTokenQuantity tx: ", tx);
-
-//   const result = await simulateTx(tx, decoders.i128, server);
-//   return result;
-// };
-
 export const mintTokens = async ({
   tokenId,
   quantity,
@@ -337,8 +282,8 @@ export const mintTokens = async ({
 }: {
   tokenId: string;
   quantity: number;
-  destinationPubKey: string; // to
-  adminPubKey: string; // from
+  destinationPubKey: string;
+  adminPubKey: string;
   memo: string;
   tokenSymbol: string;
   txBuilderAdmin: SorobanClient.TransactionBuilder;
@@ -346,7 +291,6 @@ export const mintTokens = async ({
   networkPassphrase: string;
 }) => {
   const contract = new SorobanClient.Contract(tokenId);
-
   const txBuilderDestination = await getTxBuilder(
     destinationPubKey!,
     BASE_FEE,
@@ -355,8 +299,6 @@ export const mintTokens = async ({
   );
 
   try {
-    console.log("Establishing the trustline for minting tokens...");
-
     const trustlineResultTxResult = txBuilderDestination
       .addOperation(
         SorobanClient.Operation.changeTrust({
@@ -386,14 +328,11 @@ export const mintTokens = async ({
       )
       .setTimeout(SorobanClient.TimeoutInfinite);
 
-    if (memo.length > 0) {
+    if (memo?.length > 0) {
       tx.addMemo(SorobanClient.Memo.text(memo));
     }
 
-    const preparedTransaction = await server.prepareTransaction(
-      tx.build(),
-      networkPassphrase,
-    );
+    const preparedTransaction = await server.prepareTransaction(tx.build());
 
     return preparedTransaction.toXDR();
   } catch (err) {

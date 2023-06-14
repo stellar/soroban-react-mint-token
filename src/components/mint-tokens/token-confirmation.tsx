@@ -1,12 +1,7 @@
 import React from "react";
 import { Button, Heading, Profile } from "@stellar/design-system";
 import { NetworkDetails, signTx } from "../../helpers/network";
-import {
-  mintTokens,
-  getTxBuilder,
-  parseTokenAmount,
-  getServer,
-} from "../../helpers/soroban";
+import { mintTokens, getTxBuilder, getServer } from "../../helpers/soroban";
 
 interface ConfirmMintTxProps {
   quantity: string;
@@ -17,14 +12,13 @@ interface ConfirmMintTxProps {
   network: string;
   onTxSign: (xdr: string) => void;
   tokenId: string;
-  tokenDecimals: number;
   tokenSymbol: string;
   networkDetails: NetworkDetails;
 }
 
 export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
   const signWithFreighter = async () => {
-    const quantity = parseTokenAmount(props.quantity, props.tokenDecimals);
+    const quantity = parseFloat(props.quantity);
     const server = getServer(props.networkDetails);
     const txBuilderAdmin = await getTxBuilder(
       props.pubKey,
@@ -32,9 +26,10 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
       server,
       props.networkDetails.networkPassphrase,
     );
+
     const xdr = await mintTokens({
       tokenId: props.tokenId,
-      quantity: quantity.toNumber(),
+      quantity,
       destinationPubKey: props.destination,
       adminPubKey: props.pubKey,
       memo: props.memo,
@@ -43,6 +38,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
       server,
       networkPassphrase: props.networkDetails.networkPassphrase,
     });
+
     const options = {
       network: props.networkDetails.network,
       networkPassphrase: props.networkDetails.networkPassphrase,
@@ -79,10 +75,10 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
         </div>
         <div className="tx-detail-item">
           <p className="detail-header">Memo</p>
-          <p className="detail-value">{props.memo}</p>
+          <p className="detail-value">{props.memo ? props.memo : "(None)"}</p>
         </div>
       </div>
-      <div className="submit-row-confirm">
+      <div className="submit-row">
         <Button
           size="md"
           variant="tertiary"

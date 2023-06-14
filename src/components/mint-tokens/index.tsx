@@ -21,8 +21,6 @@ import {
   BASE_FEE,
   XLM_DECIMALS,
   getTokenSymbol,
-  getTokenDecimals,
-  getTokenBalance,
   getServer,
 } from "../../helpers/soroban";
 
@@ -69,7 +67,6 @@ export const MintToken = (props: MintTokenProps) => {
   // @ts-ignore
   const [tokenSymbol, setTokenSymbol] = React.useState("");
   // @ts-ignore
-  const [tokenBalance, setTokenBalance] = React.useState("");
   const [quantity, setQuantity] = React.useState("");
   const [signedXdr, setSignedXdr] = React.useState("");
   /* eslint-enable */
@@ -80,8 +77,6 @@ export const MintToken = (props: MintTokenProps) => {
 
     const server = getServer(activeNetworkDetails);
 
-    console.log("**LOG** server: ", server);
-
     try {
       const txBuilderAdmin = await getTxBuilder(
         activePubKey!,
@@ -90,21 +85,8 @@ export const MintToken = (props: MintTokenProps) => {
         activeNetworkDetails.networkPassphrase,
       );
 
-      console.log("**LOG** txBuilderAdmin: ", txBuilderAdmin);
       const symbol = await getTokenSymbol(id, txBuilderAdmin, server);
       setTokenSymbol(symbol);
-
-      const balance = await getTokenBalance(
-        activePubKey!,
-        id,
-        txBuilderAdmin,
-        server,
-      );
-      setTokenBalance(balance);
-
-      const decimals = await getTokenDecimals(id, txBuilderAdmin, server);
-      setTokenDecimals(decimals);
-      setIsLoadingTokenDetails(false);
 
       return true;
     } catch (error) {
@@ -127,7 +109,6 @@ export const MintToken = (props: MintTokenProps) => {
         return (
           <ConfirmMintTx
             tokenId={tokenId}
-            tokenDecimals={tokenDecimals}
             pubKey={activePubKey!}
             tokenSymbol={tokenSymbol}
             onTxSign={setSignedTx}
@@ -141,13 +122,6 @@ export const MintToken = (props: MintTokenProps) => {
         );
       }
       case 5: {
-        if (isLoadingTokenDetails) {
-          return (
-            <div className="loading">
-              <Loader />
-            </div>
-          );
-        }
         const onClick = () => setStepCount((stepCount + 1) as StepCount);
         return (
           <TokenTransaction
@@ -164,7 +138,6 @@ export const MintToken = (props: MintTokenProps) => {
         return (
           <TokenQuantity
             quantity={quantity}
-            // decimals={tokenDecimals}
             setQuantity={setQuantity}
             onClick={onClick}
             tokenSymbol={tokenSymbol}
