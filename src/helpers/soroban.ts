@@ -273,9 +273,7 @@ export const mintTokens = async ({
   tokenId,
   quantity,
   destinationPubKey,
-  adminPubKey,
   memo,
-  tokenSymbol,
   txBuilderAdmin,
   server,
   networkPassphrase,
@@ -283,44 +281,19 @@ export const mintTokens = async ({
   tokenId: string;
   quantity: number;
   destinationPubKey: string;
-  adminPubKey: string;
   memo: string;
-  tokenSymbol: string;
   txBuilderAdmin: SorobanClient.TransactionBuilder;
   server: SorobanClient.Server;
   networkPassphrase: string;
 }) => {
   const contract = new SorobanClient.Contract(tokenId);
-  const txBuilderDestination = await getTxBuilder(
-    destinationPubKey!,
-    BASE_FEE,
-    server,
-    networkPassphrase,
-  );
-
-  try {
-    const trustlineResultTxResult = txBuilderDestination
-      .addOperation(
-        SorobanClient.Operation.changeTrust({
-          asset: new SorobanClient.Asset(tokenSymbol, adminPubKey),
-        }),
-      )
-      .setTimeout(SorobanClient.TimeoutInfinite)
-      .build();
-
-    console.debug("trustlineResultTxResult: ", trustlineResultTxResult);
-  } catch (err) {
-    console.log("Error while establishing the trustline: ", err);
-    console.error(err);
-  }
 
   try {
     const tx = txBuilderAdmin
       .addOperation(
         contract.call(
-          "transfer",
+          "mint",
           ...[
-            accountToScVal(adminPubKey), // from
             accountToScVal(destinationPubKey), // to
             numberToI128(quantity), // quantity
           ],
@@ -332,7 +305,10 @@ export const mintTokens = async ({
       tx.addMemo(SorobanClient.Memo.text(memo));
     }
 
-    const preparedTransaction = await server.prepareTransaction(tx.build());
+    const preparedTransaction = await server.prepareTransaction(
+      tx.build(),
+      networkPassphrase,
+    );
 
     return preparedTransaction.toXDR();
   } catch (err) {

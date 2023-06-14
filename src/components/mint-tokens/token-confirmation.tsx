@@ -31,9 +31,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
       tokenId: props.tokenId,
       quantity,
       destinationPubKey: props.destination,
-      adminPubKey: props.pubKey,
       memo: props.memo,
-      tokenSymbol: props.tokenSymbol,
       txBuilderAdmin,
       server,
       networkPassphrase: props.networkDetails.networkPassphrase,
@@ -44,8 +42,13 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
       networkPassphrase: props.networkDetails.networkPassphrase,
       accountToSign: props.pubKey,
     };
-    const signedTx = await signTx(xdr, options);
-    props.onTxSign(signedTx);
+
+    try {
+      const signedTx = await signTx(xdr, options);
+      props.onTxSign(signedTx);
+    } catch (e) {
+      console.log("e: ", e);
+    }
   };
   return (
     <>
