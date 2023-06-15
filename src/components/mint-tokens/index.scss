@@ -92,9 +92,20 @@
     }
 
     .signed-xdr {
+      position: relative;
       display: flex;
       flex-direction: column;
       margin-bottom: 1rem;
+
+      .Card {
+        .xdr-copy {
+          position: absolute;
+          right: 0;
+          top: 0;
+          padding: 1rem;
+          width: auto;
+        }
+      }
 
       .detail-header {
         color: var(--color-gray-60);

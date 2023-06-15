@@ -53,7 +53,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
   return (
     <>
       <Heading as="h1" size="sm">
-        Confirm Payment
+        Confirm Mint Transaction
       </Heading>
       <div className="tx-details">
         <div className="tx-detail-item">
@@ -67,7 +67,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
           </div>
         </div>
         <div className="tx-detail-item">
-          <p className="detail-header">Amount</p>
+          <p className="detail-header">Quantity</p>
           <p className="detail-value">
             {props.quantity} {props.tokenSymbol}
           </p>
