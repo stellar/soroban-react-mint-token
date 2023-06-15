@@ -21,12 +21,12 @@ import {
   BASE_FEE,
   XLM_DECIMALS,
   getTokenSymbol,
-  getTokenDecimals,
-  getTokenBalance,
   getServer,
 } from "../../helpers/soroban";
 
+import { ConfirmMintTx } from "./token-confirmation";
 import { TokenTransaction } from "./token-transaction";
+import { TokenQuantity } from "./token-quantity";
 import { TokenInput } from "./token-input";
 import { TokenDest } from "./token-destination";
 import { ConnectWallet } from "./connect-wallet";
@@ -54,7 +54,8 @@ export const MintToken = (props: MintTokenProps) => {
   const [fee, setFee] = React.useState(BASE_FEE);
   const [memo, setMemo] = React.useState("");
 
-  const [isLoadingTokenDetails, setTokenDetails] = React.useState(false);
+  const [isLoadingTokenDetails, setIsLoadingTokenDetails] =
+    React.useState<boolean>(false);
 
   // Not using vals yet
   /* eslint-disable */
@@ -62,74 +63,65 @@ export const MintToken = (props: MintTokenProps) => {
   const [tokenId, setTokenId] = React.useState("");
   // @ts-ignore
   const [tokenDecimals, setTokenDecimals] = React.useState(XLM_DECIMALS);
-  const [paymentDestination, setPaymentDest] = React.useState("");
+  const [tokenDestination, setTokenDestination] = React.useState("");
   // @ts-ignore
   const [tokenSymbol, setTokenSymbol] = React.useState("");
   // @ts-ignore
-  const [tokenBalance, setTokenBalance] = React.useState("");
+  const [quantity, setQuantity] = React.useState("");
+  const [signedXdr, setSignedXdr] = React.useState("");
   /* eslint-enable */
 
   async function setToken(id: string) {
-    setTokenDetails(true);
+    setIsLoadingTokenDetails(true);
     setTokenId(id);
 
     const server = getServer(activeNetworkDetails);
 
     try {
-      const txBuilderSymbol = await getTxBuilder(
+      const txBuilderAdmin = await getTxBuilder(
         activePubKey!,
         BASE_FEE,
         server,
         activeNetworkDetails.networkPassphrase,
       );
 
-      const symbol = await getTokenSymbol(id, txBuilderSymbol, server);
+      const symbol = await getTokenSymbol(id, txBuilderAdmin, server);
       setTokenSymbol(symbol);
-
-      const txBuilderBalance = await getTxBuilder(
-        activePubKey!,
-        BASE_FEE,
-        server,
-        activeNetworkDetails.networkPassphrase,
-      );
-      const balance = await getTokenBalance(
-        activePubKey!,
-        id,
-        txBuilderBalance,
-        server,
-      );
-      setTokenBalance(balance);
-
-      const txBuilderDecimals = await getTxBuilder(
-        activePubKey!,
-        BASE_FEE,
-        server,
-        activeNetworkDetails.networkPassphrase,
-      );
-      const decimals = await getTokenDecimals(id, txBuilderDecimals, server);
-      setTokenDecimals(decimals);
-      setTokenDetails(false);
 
       return true;
     } catch (error) {
       console.log(error);
       setConnectionError("Unable to fetch token details.");
-      setTokenDetails(false);
+      setIsLoadingTokenDetails(false);
 
       return false;
     }
   }
+  console.log("signedXdr: ", signedXdr);
 
   function renderStep(step: StepCount) {
     switch (step) {
-      case 4: {
-        if (isLoadingTokenDetails) {
-          return (
-            <div className="loading">
-              <Loader />
-            </div>
-          );
-        }
+      case 6: {
+        const setSignedTx = (xdr: string) => {
+          setSignedXdr(xdr);
+          setStepCount((stepCount + 1) as StepCount);
+        };
+        return (
+          <ConfirmMintTx
+            tokenId={tokenId}
+            pubKey={activePubKey!}
+            tokenSymbol={tokenSymbol}
+            onTxSign={setSignedTx}
+            network={activeNetworkDetails.network}
+            destination={tokenDestination}
+            quantity={quantity}
+            fee={fee}
+            memo={memo}
+            networkDetails={activeNetworkDetails}
+          />
+        );
+      }
+      case 5: {
         const onClick = () => setStepCount((stepCount + 1) as StepCount);
         return (
           <TokenTransaction
@@ -138,6 +130,17 @@ export const MintToken = (props: MintTokenProps) => {
             onClick={onClick}
             setFee={setFee}
             setMemo={setMemo}
+          />
+        );
+      }
+      case 4: {
+        const onClick = () => setStepCount((stepCount + 1) as StepCount);
+        return (
+          <TokenQuantity
+            quantity={quantity}
+            setQuantity={setQuantity}
+            onClick={onClick}
+            tokenSymbol={tokenSymbol}
           />
         );
       }
@@ -163,8 +166,8 @@ export const MintToken = (props: MintTokenProps) => {
         return (
           <TokenDest
             onClick={onClick}
-            setDestination={setPaymentDest}
-            destination={paymentDestination}
+            setDestination={setTokenDestination}
+            destination={tokenDestination}
           />
         );
       }

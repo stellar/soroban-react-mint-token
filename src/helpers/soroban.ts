@@ -244,6 +244,7 @@ export const getTokenSymbol = async (
   server: SorobanClient.Server,
 ) => {
   const contract = new SorobanClient.Contract(tokenId);
+
   const tx = txBuilder
     .addOperation(contract.call("symbol"))
     .setTimeout(SorobanClient.TimeoutInfinite)
@@ -268,35 +269,50 @@ export const getTokenName = async (
   return result;
 };
 
-export const getTokenDecimals = async (
-  tokenId: string,
-  txBuilder: SorobanClient.TransactionBuilder,
-  server: SorobanClient.Server,
-) => {
+export const mintTokens = async ({
+  tokenId,
+  quantity,
+  destinationPubKey,
+  memo,
+  txBuilderAdmin,
+  server,
+  networkPassphrase,
+}: {
+  tokenId: string;
+  quantity: number;
+  destinationPubKey: string;
+  memo: string;
+  txBuilderAdmin: SorobanClient.TransactionBuilder;
+  server: SorobanClient.Server;
+  networkPassphrase: string;
+}) => {
   const contract = new SorobanClient.Contract(tokenId);
-  const tx = txBuilder
-    .addOperation(contract.call("decimals"))
-    .setTimeout(SorobanClient.TimeoutInfinite)
-    .build();
 
-  const result = await simulateTx<number>(tx, decoders.u32, server);
-  return result;
+  try {
+    const tx = txBuilderAdmin
+      .addOperation(
+        contract.call(
+          "mint",
+          ...[
+            accountToScVal(destinationPubKey), // to
+            numberToI128(quantity), // quantity
+          ],
+        ),
+      )
+      .setTimeout(SorobanClient.TimeoutInfinite);
+
+    if (memo?.length > 0) {
+      tx.addMemo(SorobanClient.Memo.text(memo));
+    }
+
+    const preparedTransaction = await server.prepareTransaction(
+      tx.build(),
+      networkPassphrase,
+    );
+
+    return preparedTransaction.toXDR();
+  } catch (err) {
+    console.log("err");
+    return "error";
+  }
 };
-
-export const getTokenBalance = async (
-  address: string,
-  tokenId: string,
-  txBuilder: SorobanClient.TransactionBuilder,
-  server: SorobanClient.Server,
-) => {
-  const params = [accountToScVal(address)];
-  const contract = new SorobanClient.Contract(tokenId);
-  const tx = txBuilder
-    .addOperation(contract.call("balance", ...params))
-    .setTimeout(SorobanClient.TimeoutInfinite)
-    .build();
-
-  const result = await simulateTx(tx, decoders.i128, server);
-  return result;
-};
-
