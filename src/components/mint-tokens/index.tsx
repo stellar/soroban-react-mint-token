@@ -39,12 +39,11 @@ import "./index.scss";
 type StepCount = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 interface MintTokenProps {
-  isShowingHeader?: boolean;
+  hasHeader?: boolean;
 }
 
 export const MintToken = (props: MintTokenProps) => {
-  const isShowingHeader =
-    props.isShowingHeader === undefined ? true : props.isShowingHeader;
+  const hasHeader = props.hasHeader === undefined ? true : props.hasHeader;
   const [activeNetworkDetails, setActiveNetworkDetails] = React.useState(
     {} as NetworkDetails,
   );
@@ -102,7 +101,6 @@ export const MintToken = (props: MintTokenProps) => {
       return false;
     }
   }
-  console.log("signedXdr: ", signedXdr);
 
   function renderStep(step: StepCount) {
     switch (step) {
@@ -257,7 +255,7 @@ export const MintToken = (props: MintTokenProps) => {
 
   return (
     <>
-      {isShowingHeader && (
+      {hasHeader && (
         <Layout.Header hasThemeSwitch projectId="soroban-react-mint-token" />
       )}
       <div className="Layout__inset account-badge-row">
