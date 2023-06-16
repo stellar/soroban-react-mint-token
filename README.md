@@ -28,17 +28,17 @@ The Mint Token DApp offers the following features:
 
 ## Getting Started
 
-To use the Payment DApp, follow these steps:
+To use the Mint Token DApp, follow these steps:
 
 1. Install and set up the [Freighter wallet](https://www.freighter.app/).
 
 2. Clone and navigate into the
-   [Payment DApp repository](https://github.com/stellar/soroban-react-payment/tree/main)
+   [Mint Token DApp repository](https://github.com/stellar/soroban-react-mint-token/tree/main)
    by trunning the following:
 
    ```
-   git clone https://github.com/stellar/soroban-react-payment.git
-   cd soroban-react-payment
+   git clone https://github.com/stellar/soroban-react-mint-token.git
+   cd soroban-react-mint-token
    ```
 
 3. Install the dependencies by running the following:
@@ -98,7 +98,7 @@ yarn && yarn start
 
 ## Contributions
 
-Contributions to the Payment DApp are welcome. If you encounter any issues, have
+Contributions to the Mint Token DApp are welcome. If you encounter any issues, have
 suggestions for improvements, or would like to contribute to the codebase,
 please submit an issue, pull request, or reach out to us on
 [Discord](https://discord.com/channels/897514728459468821/1037073682599780494).
