@@ -22,8 +22,11 @@ import {
   XLM_DECIMALS,
   getTokenSymbol,
   getServer,
+  submitTx,
 } from "../../helpers/soroban";
 
+import { TxResult } from "./tx-result";
+import { SubmitToken } from "./token-submit";
 import { ConfirmMintTx } from "./token-confirmation";
 import { TokenTransaction } from "./token-transaction";
 import { TokenQuantity } from "./token-quantity";
@@ -68,7 +71,9 @@ export const MintToken = (props: MintTokenProps) => {
   const [tokenSymbol, setTokenSymbol] = React.useState("");
   // @ts-ignore
   const [quantity, setQuantity] = React.useState("");
+  const [txResultXDR, setTxResultXDR] = React.useState("");
   const [signedXdr, setSignedXdr] = React.useState("");
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   /* eslint-enable */
 
   async function setToken(id: string) {
@@ -101,6 +106,47 @@ export const MintToken = (props: MintTokenProps) => {
 
   function renderStep(step: StepCount) {
     switch (step) {
+      case 8: {
+        const onClick = () => setStepCount(1);
+        return <TxResult onClick={onClick} resultXDR={txResultXDR} />;
+      }
+      case 7: {
+        const submit = async () => {
+          const server = getServer(activeNetworkDetails);
+
+          setIsSubmitting(true);
+
+          try {
+            const result = await submitTx(
+              signedXdr,
+              activeNetworkDetails.networkPassphrase,
+              server,
+            );
+
+            setTxResultXDR(result);
+            setIsSubmitting(false);
+
+            setStepCount((stepCount + 1) as StepCount);
+          } catch (error) {
+            console.log(error);
+            setIsSubmitting(false);
+            setConnectionError(ERRORS.UNABLE_TO_SUBMIT_TX);
+          }
+        };
+        return (
+          <SubmitToken
+            network={activeNetworkDetails.network}
+            destination={tokenDestination}
+            quantity={quantity}
+            tokenSymbol={tokenSymbol}
+            fee={fee}
+            signedXdr={signedXdr}
+            isSubmitting={isSubmitting}
+            memo={memo}
+            onClick={submit}
+          />
+        );
+      }
       case 6: {
         const setSignedTx = (xdr: string) => {
           setSignedXdr(xdr);
