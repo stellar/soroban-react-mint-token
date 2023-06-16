@@ -1,4 +1,15 @@
-import * as SorobanClient from "soroban-client";
+import {
+  Address,
+  Contract,
+  Memo,
+  MemoType,
+  Operation,
+  Server,
+  TimeoutInfinite,
+  Transaction,
+  TransactionBuilder,
+  xdr,
+} from "soroban-client";
 import BigNumber from "bignumber.js";
 import { NetworkDetails } from "./network";
 import { stroopToXlm } from "./format";
@@ -20,15 +31,15 @@ export const RPC_URLS: { [key: string]: string } = {
 };
 
 export const accountToScVal = (account: string) =>
-  new SorobanClient.Address(account).toScVal();
+  new Address(account).toScVal();
 
-export const decodeBytesN = (xdr: string) => {
-  const val = SorobanClient.xdr.ScVal.fromXDR(xdr, "base64");
+export const decodeBytesN = (xdrStr: string) => {
+  const val = xdr.ScVal.fromXDR(xdrStr, "base64");
   return val.bytes().toString();
 };
 
-export const decodei128 = (xdr: string) => {
-  const value = SorobanClient.xdr.ScVal.fromXDR(xdr, "base64");
+export const decodei128 = (xdrStr: string) => {
+  const value = xdr.ScVal.fromXDR(xdrStr, "base64");
   try {
     return new I128([
       BigInt(value.i128().lo().low),
@@ -42,8 +53,8 @@ export const decodei128 = (xdr: string) => {
   }
 };
 
-export const decodeu32 = (xdr: string) => {
-  const val = SorobanClient.xdr.ScVal.fromXDR(xdr, "base64");
+export const decodeu32 = (xdrStr: string) => {
+  const val = xdr.ScVal.fromXDR(xdrStr, "base64");
   return val.u32();
 };
 
@@ -96,7 +107,7 @@ const bigNumberFromBytes = (
   return BigNumber(b.toString()).multipliedBy(sign);
 };
 
-export const numberToI128 = (value: number): SorobanClient.xdr.ScVal => {
+export const numberToI128 = (value: number): xdr.ScVal => {
   const bigValue = BigNumber(value);
   const b: bigint = BigInt(bigValue.toFixed(0));
   const buf = bigintToBuf(b);
@@ -119,18 +130,16 @@ export const numberToI128 = (value: number): SorobanClient.xdr.ScVal => {
     padded[0] |= 0x80;
   }
 
-  const hi = new SorobanClient.xdr.Int64(
+  const hi = new xdr.Int64(
     bigNumberFromBytes(false, ...padded.slice(4, 8)).toNumber(),
     bigNumberFromBytes(false, ...padded.slice(0, 4)).toNumber(),
   );
-  const lo = new SorobanClient.xdr.Uint64(
+  const lo = new xdr.Uint64(
     bigNumberFromBytes(false, ...padded.slice(12, 16)).toNumber(),
     bigNumberFromBytes(false, ...padded.slice(8, 12)).toNumber(),
   );
 
-  return SorobanClient.xdr.ScVal.scvI128(
-    new SorobanClient.xdr.Int128Parts({ lo, hi }),
-  );
+  return xdr.ScVal.scvI128(new xdr.Int128Parts({ lo, hi }));
 };
 
 export const parseTokenAmount = (value: string, decimals: number) => {
@@ -167,30 +176,27 @@ export const parseTokenAmount = (value: string, decimals: number) => {
 };
 
 export const getServer = (networkDetails: NetworkDetails) =>
-  new SorobanClient.Server(RPC_URLS[networkDetails.network], {
+  new Server(RPC_URLS[networkDetails.network], {
     allowHttp: networkDetails.networkUrl.startsWith("http://"),
   });
 
 export const getTxBuilder = async (
   pubKey: string,
   fee: string,
-  server: SorobanClient.Server,
+  server: Server,
   networkPassphrase: string,
 ) => {
   const source = await server.getAccount(pubKey);
-  return new SorobanClient.TransactionBuilder(source, {
+  return new TransactionBuilder(source, {
     fee,
     networkPassphrase,
   });
 };
 
 export const simulateTx = async <ArgType>(
-  tx: SorobanClient.Transaction<
-    SorobanClient.Memo<SorobanClient.MemoType>,
-    SorobanClient.Operation[]
-  >,
+  tx: Transaction<Memo<MemoType>, Operation[]>,
   decoder: (xdr: string) => ArgType,
-  server: SorobanClient.Server,
+  server: Server,
 ) => {
   const { results } = await server.simulateTransaction(tx);
   if (!results || results.length !== 1) {
@@ -203,12 +209,9 @@ export const simulateTx = async <ArgType>(
 export const submitTx = async (
   signedXDR: string,
   networkPassphrase: string,
-  server: SorobanClient.Server,
+  server: Server,
 ) => {
-  const tx = SorobanClient.TransactionBuilder.fromXDR(
-    signedXDR,
-    networkPassphrase,
-  );
+  const tx = TransactionBuilder.fromXDR(signedXDR, networkPassphrase);
 
   const sendResponse = await server.sendTransaction(tx);
 
@@ -240,14 +243,14 @@ export const submitTx = async (
 
 export const getTokenSymbol = async (
   tokenId: string,
-  txBuilder: SorobanClient.TransactionBuilder,
-  server: SorobanClient.Server,
+  txBuilder: TransactionBuilder,
+  server: Server,
 ) => {
-  const contract = new SorobanClient.Contract(tokenId);
+  const contract = new Contract(tokenId);
 
   const tx = txBuilder
     .addOperation(contract.call("symbol"))
-    .setTimeout(SorobanClient.TimeoutInfinite)
+    .setTimeout(TimeoutInfinite)
     .build();
 
   const result = await simulateTx<string>(tx, decoders.bytesN, server);
@@ -256,13 +259,13 @@ export const getTokenSymbol = async (
 
 export const getTokenName = async (
   tokenId: string,
-  txBuilder: SorobanClient.TransactionBuilder,
-  server: SorobanClient.Server,
+  txBuilder: TransactionBuilder,
+  server: Server,
 ) => {
-  const contract = new SorobanClient.Contract(tokenId);
+  const contract = new Contract(tokenId);
   const tx = txBuilder
     .addOperation(contract.call("name"))
-    .setTimeout(SorobanClient.TimeoutInfinite)
+    .setTimeout(TimeoutInfinite)
     .build();
 
   const result = await simulateTx(tx, decoders.bytesN, server);
@@ -282,11 +285,11 @@ export const mintTokens = async ({
   quantity: number;
   destinationPubKey: string;
   memo: string;
-  txBuilderAdmin: SorobanClient.TransactionBuilder;
-  server: SorobanClient.Server;
+  txBuilderAdmin: TransactionBuilder;
+  server: Server;
   networkPassphrase: string;
 }) => {
-  const contract = new SorobanClient.Contract(tokenId);
+  const contract = new Contract(tokenId);
 
   try {
     const tx = txBuilderAdmin
@@ -299,10 +302,10 @@ export const mintTokens = async ({
           ],
         ),
       )
-      .setTimeout(SorobanClient.TimeoutInfinite);
+      .setTimeout(TimeoutInfinite);
 
     if (memo?.length > 0) {
-      tx.addMemo(SorobanClient.Memo.text(memo));
+      tx.addMemo(Memo.text(memo));
     }
 
     const preparedTransaction = await server.prepareTransaction(
