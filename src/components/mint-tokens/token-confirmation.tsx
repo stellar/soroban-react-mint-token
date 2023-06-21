@@ -1,7 +1,7 @@
 import React from "react";
 import { Button, Heading, Profile } from "@stellar/design-system";
 import { NetworkDetails, signTx } from "../../helpers/network";
-import { mintTokens, getTxBuilder, getServer } from "../../helpers/soroban";
+import { mintTokens, getTxBuilder, getServer, parseTokenAmount } from "../../helpers/soroban";
 
 interface ConfirmMintTxProps {
   quantity: string;
@@ -12,13 +12,14 @@ interface ConfirmMintTxProps {
   network: string;
   onTxSign: (xdr: string) => void;
   tokenId: string;
+  tokenDecimals: number;
   tokenSymbol: string;
   networkDetails: NetworkDetails;
 }
 
 export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
   const signWithFreighter = async () => {
-    const quantity = parseFloat(props.quantity);
+    const quantity = parseTokenAmount(props.quantity, props.tokenDecimals);
     const server = getServer(props.networkDetails);
     const txBuilderAdmin = await getTxBuilder(
       props.pubKey,
@@ -29,7 +30,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
 
     const xdr = await mintTokens({
       tokenId: props.tokenId,
-      quantity,
+      quantity: quantity.toNumber(),
       destinationPubKey: props.destination,
       memo: props.memo,
       txBuilderAdmin,

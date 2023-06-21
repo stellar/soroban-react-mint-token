@@ -20,6 +20,7 @@ import {
   getTxBuilder,
   BASE_FEE,
   XLM_DECIMALS,
+  getTokenDecimals,
   getTokenSymbol,
   getServer,
   submitTx,
@@ -59,21 +60,14 @@ export const MintToken = (props: MintTokenProps) => {
   const [isLoadingTokenDetails, setIsLoadingTokenDetails] =
     React.useState<boolean>(false);
 
-  // Not using vals yet
-  /* eslint-disable */
-  // @ts-ignore
   const [tokenId, setTokenId] = React.useState("");
-  // @ts-ignore
   const [tokenDecimals, setTokenDecimals] = React.useState(XLM_DECIMALS);
   const [tokenDestination, setTokenDestination] = React.useState("");
-  // @ts-ignore
   const [tokenSymbol, setTokenSymbol] = React.useState("");
-  // @ts-ignore
   const [quantity, setQuantity] = React.useState("");
   const [txResultXDR, setTxResultXDR] = React.useState("");
   const [signedXdr, setSignedXdr] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  /* eslint-enable */
 
   async function setToken(id: string) {
     setIsLoadingTokenDetails(true);
@@ -91,6 +85,16 @@ export const MintToken = (props: MintTokenProps) => {
 
       const symbol = await getTokenSymbol(id, txBuilderAdmin, server);
       setTokenSymbol(symbol);
+
+      const txBuilderDecimals = await getTxBuilder(
+        activePubKey!,
+        BASE_FEE,
+        server,
+        activeNetworkDetails.networkPassphrase,
+      );
+      const decimals = await getTokenDecimals(id, txBuilderDecimals, server);
+      setTokenDecimals(decimals);
+      setIsLoadingTokenDetails(false);
 
       return true;
     } catch (error) {
@@ -162,6 +166,7 @@ export const MintToken = (props: MintTokenProps) => {
             fee={fee}
             memo={memo}
             networkDetails={activeNetworkDetails}
+            tokenDecimals={tokenDecimals}
           />
         );
       }

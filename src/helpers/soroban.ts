@@ -272,6 +272,21 @@ export const getTokenName = async (
   return result;
 };
 
+export const getTokenDecimals = async (
+  tokenId: string,
+  txBuilder: TransactionBuilder,
+  server: Server,
+) => {
+  const contract = new Contract(tokenId);
+  const tx = txBuilder
+    .addOperation(contract.call("decimals"))
+    .setTimeout(TimeoutInfinite)
+    .build();
+
+  const result = await simulateTx<number>(tx, decoders.u32, server);
+  return result;
+};
+
 export const mintTokens = async ({
   tokenId,
   quantity,
