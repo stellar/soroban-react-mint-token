@@ -136,4 +136,18 @@
   .submit-row-destination {
     margin-top: 2rem;
   }
+  
+  .submit-row-confirm {
+    margin-top: 1rem;
+
+    .Button {
+      position: relative;
+
+      .Loader {
+        position: absolute;
+        right: 50px;
+      }
+    }
+  }
+
 }

@@ -24,7 +24,7 @@ export const TokenQuantity = (props: TokenQuantityProps) => {
       <Input
         fieldSize="md"
         id="input-amount"
-        label="Choose quantity to send"
+        label="Choose quantity to mint"
         value={props.quantity}
         onChange={handleChange}
         type="number"
