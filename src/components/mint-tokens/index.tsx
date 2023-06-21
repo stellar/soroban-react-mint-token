@@ -269,12 +269,14 @@ export const MintToken = (props: MintTokenProps) => {
         )}
       </div>
       <div className="Layout__inset layout">
-        <div className="admin-banner-container">
-          <Notification
-            title="Account must be an admin of the token"
-            variant="primary"
-          />
-        </div>
+        {stepCount === 3 && (
+          <div className="admin-banner-container">
+            <Notification
+              title="Account must be an admin of the token"
+              variant="primary"
+            />
+          </div>
+        )}
         <div className="mint-token">
           <Card variant="primary">
             <Caption size="sm" addlClassName="step-count">
