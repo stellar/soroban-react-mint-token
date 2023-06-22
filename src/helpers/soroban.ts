@@ -5,6 +5,7 @@ import {
   MemoType,
   Operation,
   Server,
+  SorobanRpc,
   TimeoutInfinite,
   Transaction,
   TransactionBuilder,
@@ -20,24 +21,37 @@ import { ERRORS } from "./error";
 export const BASE_FEE = "100";
 export const baseFeeXlm = stroopToXlm(BASE_FEE).toString();
 
-export enum SorobanTxStatus {
-  PENDING = "pending",
-  SUCCESS = "success",
-}
+export const SendTxStatus: {
+  [index: string]: SorobanRpc.SendTransactionStatus;
+} = {
+  Pending: "PENDING",
+  Duplicate: "DUPLICATE",
+  Retry: "TRY_AGAIN_LATER",
+  Error: "ERROR",
+};
+
+export const GetTxStatus: {
+  [index: string]: SorobanRpc.GetTransactionStatus;
+} = {
+  Success: "SUCCESS",
+  NotFound: "NOT_FOUND",
+  Failed: "FAILED",
+};
+
 export const XLM_DECIMALS = 7;
 
 export const RPC_URLS: { [key: string]: string } = {
   FUTURENET: "https://rpc-futurenet.stellar.org/",
 };
 
-export const accountToScVal = (account: string) =>
-  new Address(account).toScVal();
-
+// The following 3 decoders can be used to turn an XDR string to a native type
+// XDR -> String
 export const decodeBytesN = (xdrStr: string) => {
   const val = xdr.ScVal.fromXDR(xdrStr, "base64");
   return val.bytes().toString();
 };
 
+// XDR -> String
 export const decodei128 = (xdrStr: string) => {
   const value = xdr.ScVal.fromXDR(xdrStr, "base64");
   try {
@@ -53,6 +67,7 @@ export const decodei128 = (xdrStr: string) => {
   }
 };
 
+// XDR -> Number
 export const decodeu32 = (xdrStr: string) => {
   const val = xdr.ScVal.fromXDR(xdrStr, "base64");
   return val.u32();
@@ -64,6 +79,7 @@ export const decoders = {
   u32: decodeu32,
 };
 
+// Helper used in SCVal conversion
 const bigintToBuf = (bn: bigint): Buffer => {
   let hex = BigInt(bn).toString(16).replace(/^-/, "");
   if (hex.length % 2) {
@@ -89,6 +105,7 @@ const bigintToBuf = (bn: bigint): Buffer => {
   return Buffer.from(u8);
 };
 
+// Helper used in SCVal conversion
 const bigNumberFromBytes = (
   signed: boolean,
   ...bytes: (string | number | bigint)[]
@@ -107,6 +124,11 @@ const bigNumberFromBytes = (
   return BigNumber(b.toString()).multipliedBy(sign);
 };
 
+// Can be used whenever you need an Address argument for a contract method
+export const accountToScVal = (account: string) =>
+  new Address(account).toScVal();
+
+  // Can be used whenever you need an i128 argument for a contract method
 export const numberToI128 = (value: number): xdr.ScVal => {
   const bigValue = BigNumber(value);
   const b: bigint = BigInt(bigValue.toFixed(0));
@@ -142,6 +164,7 @@ export const numberToI128 = (value: number): xdr.ScVal => {
   return xdr.ScVal.scvI128(new xdr.Int128Parts({ lo, hi }));
 };
 
+// Given a display value for a token and a number of decimals, return the correspding BigNumber
 export const parseTokenAmount = (value: string, decimals: number) => {
   const comps = value.split(".");
 
@@ -175,11 +198,13 @@ export const parseTokenAmount = (value: string, decimals: number) => {
   return wholeValue.shiftedBy(decimals).plus(fractionValue);
 };
 
+// Get a server configfured for a specific network
 export const getServer = (networkDetails: NetworkDetails) =>
   new Server(RPC_URLS[networkDetails.network], {
     allowHttp: networkDetails.networkUrl.startsWith("http://"),
   });
 
+  // Get a TransactionBuilder configured with our public key
 export const getTxBuilder = async (
   pubKey: string,
   fee: string,
@@ -193,6 +218,8 @@ export const getTxBuilder = async (
   });
 };
 
+//  Can be used whenever we need to perform a "read-only" operation
+//  Used in getTokenSymbol, getTokenName, and getTokenDecimals
 export const simulateTx = async <ArgType>(
   tx: Transaction<Memo<MemoType>, Operation[]>,
   decoder: (xdr: string) => ArgType,
@@ -206,6 +233,8 @@ export const simulateTx = async <ArgType>(
   return decoder(result.xdr);
 };
 
+// Build and submits a transaction to the Soroban RPC
+// Polls for non-pending state, returns result after status is updated
 export const submitTx = async (
   signedXDR: string,
   networkPassphrase: string,
@@ -219,11 +248,11 @@ export const submitTx = async (
     throw new Error(ERRORS.UNABLE_TO_SUBMIT_TX);
   }
 
-  if (sendResponse.status === "PENDING") {
+  if (sendResponse.status === SendTxStatus.Pending) {
     let txResponse = await server.getTransaction(sendResponse.hash);
 
     // Poll this until the status is not "NOT_FOUND"
-    while (txResponse.status === "NOT_FOUND") {
+    while (txResponse.status === GetTxStatus.NotFound) {
       // See if the transaction is complete
       // eslint-disable-next-line no-await-in-loop
       txResponse = await server.getTransaction(sendResponse.hash);
@@ -241,6 +270,7 @@ export const submitTx = async (
   }
 };
 
+// Get the tokens symbol, decoded as a string
 export const getTokenSymbol = async (
   tokenId: string,
   txBuilder: TransactionBuilder,
@@ -257,6 +287,7 @@ export const getTokenSymbol = async (
   return result;
 };
 
+// Get the tokens name, decoded as a string
 export const getTokenName = async (
   tokenId: string,
   txBuilder: TransactionBuilder,
@@ -272,6 +303,7 @@ export const getTokenName = async (
   return result;
 };
 
+// Get the tokens decimals, decoded as a number
 export const getTokenDecimals = async (
   tokenId: string,
   txBuilder: TransactionBuilder,
@@ -287,6 +319,8 @@ export const getTokenDecimals = async (
   return result;
 };
 
+// Build a "mint" operation, and prepare the corresponding XDR
+// https://github.com/stellar/soroban-examples/blob/main/token/src/contract.rs#L39
 export const mintTokens = async ({
   tokenId,
   quantity,
