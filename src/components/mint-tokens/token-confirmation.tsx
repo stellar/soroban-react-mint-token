@@ -1,20 +1,23 @@
 import React from "react";
 import { Button, Heading, Profile } from "@stellar/design-system";
+import { StellarWalletsKit } from "stellar-wallets-kit";
 import { NetworkDetails, signTx } from "../../helpers/network";
 import { mintTokens, getTxBuilder, getServer, parseTokenAmount } from "../../helpers/soroban";
+import { ERRORS } from "../../helpers/error";
 
 interface ConfirmMintTxProps {
   quantity: string;
   destination: string;
   fee: string;
   pubKey: string;
+  kit: StellarWalletsKit;
   memo: string;
-  network: string;
   onTxSign: (xdr: string) => void;
   tokenId: string;
   tokenDecimals: number;
   tokenSymbol: string;
   networkDetails: NetworkDetails;
+  setError: (error: string) => void;
 }
 
 export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
@@ -38,17 +41,12 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
       networkPassphrase: props.networkDetails.networkPassphrase,
     });
 
-    const options = {
-      network: props.networkDetails.network,
-      networkPassphrase: props.networkDetails.networkPassphrase,
-      accountToSign: props.pubKey,
-    };
-
     try {
-      const signedTx = await signTx(xdr, options);
+      const signedTx = await signTx(xdr, props.pubKey, props.kit);
       props.onTxSign(signedTx);
     } catch (e) {
       console.log("e: ", e);
+      props.setError(ERRORS.UNABLE_TO_SIGN_TX);
     }
   };
   return (
@@ -59,7 +57,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
       <div className="tx-details">
         <div className="tx-detail-item">
           <p className="detail-header">Network</p>
-          <p className="detail-value">{props.network}</p>
+          <p className="detail-value">{props.networkDetails.network}</p>
         </div>
         <div className="tx-detail-item">
           <p className="detail-header">To</p>
