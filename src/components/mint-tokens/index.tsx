@@ -8,13 +8,14 @@ import {
   Profile,
   Loader,
 } from "@stellar/design-system";
-import freighterApi from "@stellar/freighter-api";
-
 import {
-  connectNetwork,
-  Networks,
-  NetworkDetails,
-} from "../../helpers/network";
+  StellarWalletsKit,
+  WalletNetwork,
+  WalletType,
+  ISupportedWallet,
+} from "stellar-wallets-kit";
+
+import { FUTURENET_DETAILS } from "../../helpers/network";
 import { ERRORS } from "../../helpers/error";
 import {
   getTxBuilder,
@@ -45,9 +46,7 @@ interface MintTokenProps {
 
 export const MintToken = (props: MintTokenProps) => {
   const hasHeader = props.hasHeader === undefined ? true : props.hasHeader;
-  const [activeNetworkDetails, setActiveNetworkDetails] = React.useState(
-    {} as NetworkDetails,
-  );
+  const [selectedNetwork] = React.useState(FUTURENET_DETAILS);
   const [activePubKey, setActivePubKey] = React.useState(null as string | null);
   const [stepCount, setStepCount] = React.useState(1 as StepCount);
   const [connectionError, setConnectionError] = React.useState(
@@ -69,18 +68,29 @@ export const MintToken = (props: MintTokenProps) => {
   const [signedXdr, setSignedXdr] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const [SWKKit] = React.useState(
+    new StellarWalletsKit({
+      network: selectedNetwork.networkPassphrase as WalletNetwork,
+      selectedWallet: WalletType.FREIGHTER,
+    }),
+  );
+
+  React.useEffect(() => {
+    SWKKit.setNetwork(selectedNetwork.networkPassphrase as WalletNetwork);
+  }, [selectedNetwork.networkPassphrase, SWKKit]);
+
   async function setToken(id: string) {
     setIsLoadingTokenDetails(true);
     setTokenId(id);
 
-    const server = getServer(activeNetworkDetails);
+    const server = getServer(selectedNetwork);
 
     try {
       const txBuilderAdmin = await getTxBuilder(
         activePubKey!,
         BASE_FEE,
         server,
-        activeNetworkDetails.networkPassphrase,
+        selectedNetwork.networkPassphrase,
       );
 
       const symbol = await getTokenSymbol(id, txBuilderAdmin, server);
@@ -90,7 +100,7 @@ export const MintToken = (props: MintTokenProps) => {
         activePubKey!,
         BASE_FEE,
         server,
-        activeNetworkDetails.networkPassphrase,
+        selectedNetwork.networkPassphrase,
       );
       const decimals = await getTokenDecimals(id, txBuilderDecimals, server);
       setTokenDecimals(decimals);
@@ -114,14 +124,14 @@ export const MintToken = (props: MintTokenProps) => {
       }
       case 7: {
         const submit = async () => {
-          const server = getServer(activeNetworkDetails);
+          const server = getServer(selectedNetwork);
 
           setIsSubmitting(true);
 
           try {
             const result = await submitTx(
               signedXdr,
-              activeNetworkDetails.networkPassphrase,
+              selectedNetwork.networkPassphrase,
               server,
             );
 
@@ -137,7 +147,7 @@ export const MintToken = (props: MintTokenProps) => {
         };
         return (
           <SubmitToken
-            network={activeNetworkDetails.network}
+            network={selectedNetwork.network}
             destination={tokenDestination}
             quantity={quantity}
             tokenSymbol={tokenSymbol}
@@ -160,13 +170,14 @@ export const MintToken = (props: MintTokenProps) => {
             pubKey={activePubKey!}
             tokenSymbol={tokenSymbol}
             onTxSign={setSignedTx}
-            network={activeNetworkDetails.network}
             destination={tokenDestination}
             quantity={quantity}
             fee={fee}
             memo={memo}
-            networkDetails={activeNetworkDetails}
+            networkDetails={selectedNetwork}
             tokenDecimals={tokenDecimals}
+            kit={SWKKit}
+            setError={setConnectionError}
           />
         );
       }
@@ -222,40 +233,42 @@ export const MintToken = (props: MintTokenProps) => {
       }
       case 1:
       default: {
-        const onClick =
-          activeNetworkDetails.network && connectionError === null
-            ? () => setStepCount((stepCount + 1) as StepCount)
-            : setConnection;
+        const onClick = async () => {
+          setConnectionError(null);
+
+          if (!activePubKey) {
+            await SWKKit.openModal({
+              allowedWallets: [
+                WalletType.ALBEDO,
+                WalletType.FREIGHTER,
+                WalletType.XBULL,
+              ],
+              onWalletSelected: async (option: ISupportedWallet) => {
+                try {
+                  SWKKit.setWallet(option.type);
+                  const publicKey = await SWKKit.getPublicKey();
+
+                  await SWKKit.setNetwork(WalletNetwork.FUTURENET);
+                  setActivePubKey(publicKey);
+                } catch (error) {
+                  console.log(error);
+                  setConnectionError(ERRORS.WALLET_CONNECTION_REJECTED);
+                }
+              },
+            });
+          } else {
+            setStepCount((stepCount + 1) as StepCount);
+          }
+        };
         return (
           <ConnectWallet
-            network={activeNetworkDetails.network}
-            connectionError={connectionError}
+            selectedNetwork={selectedNetwork.network}
+            pubKey={activePubKey}
             onClick={onClick}
           />
         );
       }
     }
-  }
-
-  async function setConnection() {
-    setConnectionError(null);
-    setActivePubKey(null);
-
-    const isConnected = await freighterApi.isConnected();
-
-    if (!isConnected) {
-      setConnectionError(ERRORS.FREIGHTER_NOT_AVAILABLE);
-      return;
-    }
-
-    const { networkDetails, pubKey } = await connectNetwork();
-
-    if (networkDetails.network !== Networks.Futurenet) {
-      setConnectionError(ERRORS.UNSUPPORTED_NETWORK);
-    }
-
-    setActiveNetworkDetails(networkDetails);
-    setActivePubKey(pubKey);
   }
 
   return (
