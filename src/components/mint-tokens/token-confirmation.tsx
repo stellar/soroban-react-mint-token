@@ -22,8 +22,11 @@ interface ConfirmMintTxProps {
 
 export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
   const signWithFreighter = async () => {
+    // Need to use the perviously fetched token decimals to properly display the quantity value
     const quantity = parseTokenAmount(props.quantity, props.tokenDecimals);
+    // Get an instance of a Soroban RPC set to the selected network
     const server = getServer(props.networkDetails);
+     // Gets a transaction builder and use it to add a "mint" operation and build the corresponding XDR
     const txBuilderAdmin = await getTxBuilder(
       props.pubKey,
       props.fee,
@@ -42,6 +45,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
     });
 
     try {
+       // Signs XDR representing the "mint" transaction
       const signedTx = await signTx(xdr, props.pubKey, props.kit);
       props.onTxSign(signedTx);
     } catch (e) {

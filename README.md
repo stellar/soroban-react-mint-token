@@ -3,23 +3,26 @@
 This serves as a basic example of how a token administrator can mint more tokens
 on Soroban.
 
+You can explore this dapp at https://scaffold-soroban.stellar.org/ by choosing
+mint-token from the "select demo" dropdown.
+
 ## Prerequisites
 
 The Mint Token DApp relies on the following dependencies:
 
-- Node (>=16.14.0 <17.0.0): https://nodejs.org/en/download/
+- Node (>=16.14.0 <=18.0.0): https://nodejs.org/en/download/
 
 - Yarn (v1.22.5 or newer): https://classic.yarnpkg.com/en/docs/install
 
-- Freighter wallet: https://www.freighter.app/
+- Freighter wallet(v5.0 or newer): https://www.freighter.app/
 
 ## Features
 
 The Mint Token DApp offers the following features:
 
 1. **Freighter Wallet Integration**: The Mint Token DApp seamlessly integrates
-   with Freighter, allowing users to connect their Freighter wallet to access
-   Soroban token balances and utilize the signing capabilities of Freighter for
+   with Freighter/Albedo/XBull, allowing users to connect their wallet to access
+   Soroban token balances and utilize their signing capabilities for
    secure and integrity-checked transactions.
 
 2. **Transaction Construction**: Leveraging the Soroban token's contract
@@ -30,7 +33,11 @@ The Mint Token DApp offers the following features:
 
 To use the Mint Token DApp, follow these steps:
 
-1. Install and set up the [Freighter wallet](https://www.freighter.app/).
+1. Install and set up one of the supported wallets.
+
+- [Freighter wallet](https://www.freighter.app/)
+- [Albedo wallet](https://albedo.link/install-extension)
+- [XBull wallet](https://xbull.app/)
 
 2. Clone and navigate into the
    [Mint Token DApp repository](https://github.com/stellar/soroban-react-mint-token/tree/main)
@@ -47,7 +54,7 @@ To use the Mint Token DApp, follow these steps:
    yarn
    ```
 
-4. Connect your Freighter wallet to the DApp and ensure that experimental mode
+4. If you are using the Freighter wallet, ensure that experimental mode
    is enabled. You can find this setting in Freighter wallet at:
    _`Settings(⚙️)>Preferences>ENABLE EXPERIMENTAL MODE`_.
 

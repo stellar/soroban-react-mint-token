@@ -45,8 +45,13 @@ interface MintTokenProps {
 }
 
 export const MintToken = (props: MintTokenProps) => {
+  // This is only needed when this component is consumed by other components that display a different header
   const hasHeader = props.hasHeader === undefined ? true : props.hasHeader;
+
+  // Default to Futurenet network, only supported network for now
   const [selectedNetwork] = React.useState(FUTURENET_DETAILS);
+
+  // Initial state, empty states for token/transaction details
   const [activePubKey, setActivePubKey] = React.useState(null as string | null);
   const [stepCount, setStepCount] = React.useState(1 as StepCount);
   const [connectionError, setConnectionError] = React.useState(
@@ -55,10 +60,6 @@ export const MintToken = (props: MintTokenProps) => {
 
   const [fee, setFee] = React.useState(BASE_FEE);
   const [memo, setMemo] = React.useState("");
-
-  const [isLoadingTokenDetails, setIsLoadingTokenDetails] =
-    React.useState<boolean>(false);
-
   const [tokenId, setTokenId] = React.useState("");
   const [tokenDecimals, setTokenDecimals] = React.useState(XLM_DECIMALS);
   const [tokenDestination, setTokenDestination] = React.useState("");
@@ -68,6 +69,11 @@ export const MintToken = (props: MintTokenProps) => {
   const [signedXdr, setSignedXdr] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+   // a basic loading state for now
+  const [isLoadingTokenDetails, setIsLoadingTokenDetails] =
+    React.useState<boolean>(false);
+
+  // Setup swc, user will set the desired wallet on connect
   const [SWKKit] = React.useState(
     new StellarWalletsKit({
       network: selectedNetwork.networkPassphrase as WalletNetwork,
@@ -75,17 +81,24 @@ export const MintToken = (props: MintTokenProps) => {
     }),
   );
 
+  // Whenever the selected network changes, set the network on swc
   React.useEffect(() => {
     SWKKit.setNetwork(selectedNetwork.networkPassphrase as WalletNetwork);
   }, [selectedNetwork.networkPassphrase, SWKKit]);
 
+  // with a user provided token ID, fetch token details
   async function setToken(id: string) {
     setIsLoadingTokenDetails(true);
     setTokenId(id);
 
+    // get an instance of a Soroban RPC server for the selected network
     const server = getServer(selectedNetwork);
 
     try {
+      // Right now, Soroban only supports operation per transaction
+      // so we need to get a transaction builder for every operation we want to call.
+      // In the future, we will be able to use more than 1 operation in a single transaction.
+
       const txBuilderAdmin = await getTxBuilder(
         activePubKey!,
         BASE_FEE,
@@ -93,6 +106,8 @@ export const MintToken = (props: MintTokenProps) => {
         selectedNetwork.networkPassphrase,
       );
 
+      // Get the symbol for the set token ID
+      // https://github.com/stellar/soroban-examples/blob/main/token/src/contract.rs#L47
       const symbol = await getTokenSymbol(id, txBuilderAdmin, server);
       setTokenSymbol(symbol);
 
@@ -102,6 +117,10 @@ export const MintToken = (props: MintTokenProps) => {
         server,
         selectedNetwork.networkPassphrase,
       );
+
+      // Get the number of decimals set for the selected token, so that we can properly display
+      // a formatted value.
+      // https://github.com/stellar/soroban-examples/blob/main/token/src/contract.rs#L43
       const decimals = await getTokenDecimals(id, txBuilderDecimals, server);
       setTokenDecimals(decimals);
       setIsLoadingTokenDetails(false);
@@ -116,6 +135,7 @@ export const MintToken = (props: MintTokenProps) => {
     }
   }
 
+   // This uses the StepCount tro render to currently active step in the payment flow
   function renderStep(step: StepCount) {
     switch (step) {
       case 8: {
@@ -123,6 +143,7 @@ export const MintToken = (props: MintTokenProps) => {
         return <TxResult onClick={onClick} resultXDR={txResultXDR} />;
       }
       case 7: {
+         // Uses state saved from previous steps in order to submit a transaction to the network
         const submit = async () => {
           const server = getServer(selectedNetwork);
 
@@ -236,6 +257,7 @@ export const MintToken = (props: MintTokenProps) => {
         const onClick = async () => {
           setConnectionError(null);
 
+          // See https://github.com/Creit-Tech/Stellar-Wallets-Kit/tree/main for more options
           if (!activePubKey) {
             await SWKKit.openModal({
               allowedWallets: [
@@ -245,6 +267,7 @@ export const MintToken = (props: MintTokenProps) => {
               ],
               onWalletSelected: async (option: ISupportedWallet) => {
                 try {
+                  // Set selected wallet,  network, and public key
                   SWKKit.setWallet(option.type);
                   const publicKey = await SWKKit.getPublicKey();
 
