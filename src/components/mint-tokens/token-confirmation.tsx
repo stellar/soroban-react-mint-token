@@ -1,6 +1,7 @@
 import React from "react";
 import { Button, Heading, Profile } from "@stellar/design-system";
 import { StellarWalletsKit } from "stellar-wallets-kit";
+import { xlmToStroop } from "helpers/format";
 import { NetworkDetails, signTx } from "../../helpers/network";
 import { mintTokens, getTxBuilder, getServer, parseTokenAmount } from "../../helpers/soroban";
 import { ERRORS } from "../../helpers/error";
@@ -29,7 +30,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
      // Gets a transaction builder and use it to add a "mint" operation and build the corresponding XDR
     const txBuilderAdmin = await getTxBuilder(
       props.pubKey,
-      props.fee,
+      xlmToStroop(props.fee).toString(),
       server,
       props.networkDetails.networkPassphrase,
     );

@@ -25,7 +25,7 @@ export const TokenTransaction = (props: TokenInputProps) => {
       <Input
         fieldSize="md"
         id="input-fee"
-        label="Estimated Fee"
+        label="Estimated Fee (XLM)"
         value={props.fee}
         onChange={handleFeeChange}
       />
