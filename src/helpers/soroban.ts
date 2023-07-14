@@ -118,7 +118,15 @@ export const simulateTx = async <ArgType>(
     throw new Error("Invalid response from simulateTransaction");
   }
   const result = results[0];
-  return scValToNative(xdr.ScVal.fromXDR(Buffer.from(result.xdr)));
+  const scVal = xdr.ScVal.fromXDR(result.xdr, "base64");
+  let convertedScVal: any;
+  try {
+    convertedScVal = scVal.str().toString();
+    return convertedScVal;
+  } catch (e) {
+    console.error(e);
+  }
+  return scValToNative(scVal);
 };
 
 // Build and submits a transaction to the Soroban RPC
