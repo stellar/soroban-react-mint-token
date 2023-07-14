@@ -3,7 +3,9 @@ import {
   Contract,
   Memo,
   MemoType,
+  nativeToScVal,
   Operation,
+  scValToNative,
   Server,
   SorobanRpc,
   TimeoutInfinite,
@@ -14,7 +16,6 @@ import {
 import BigNumber from "bignumber.js";
 import { NetworkDetails } from "./network";
 import { stroopToXlm } from "./format";
-import { I128 } from "./xdr";
 import { ERRORS } from "./error";
 
 // TODO: once soroban supports estimated fees, we can fetch this
@@ -44,125 +45,13 @@ export const RPC_URLS: { [key: string]: string } = {
   FUTURENET: "https://rpc-futurenet.stellar.org/",
 };
 
-// The following 3 decoders can be used to turn an XDR string to a native type
-// XDR -> String
-export const decodeBytesN = (xdrStr: string) => {
-  const val = xdr.ScVal.fromXDR(xdrStr, "base64");
-  return val.bytes().toString();
-};
-
-// XDR -> String
-export const decodei128 = (xdrStr: string) => {
-  const value = xdr.ScVal.fromXDR(xdrStr, "base64");
-  try {
-    return new I128([
-      BigInt(value.i128().lo().low),
-      BigInt(value.i128().lo().high),
-      BigInt(value.i128().hi().low),
-      BigInt(value.i128().hi().high),
-    ]).toString();
-  } catch (error) {
-    console.log(error);
-    return 0;
-  }
-};
-
-// XDR -> Number
-export const decodeu32 = (xdrStr: string) => {
-  const val = xdr.ScVal.fromXDR(xdrStr, "base64");
-  return val.u32();
-};
-
-export const decoders = {
-  bytesN: decodeBytesN,
-  i128: decodei128,
-  u32: decodeu32,
-};
-
-// Helper used in SCVal conversion
-const bigintToBuf = (bn: bigint): Buffer => {
-  let hex = BigInt(bn).toString(16).replace(/^-/, "");
-  if (hex.length % 2) {
-    hex = `0${hex}`;
-  }
-
-  const len = hex.length / 2;
-  const u8 = new Uint8Array(len);
-
-  let i = 0;
-  let j = 0;
-  while (i < len) {
-    u8[i] = parseInt(hex.slice(j, j + 2), 16);
-    i += 1;
-    j += 2;
-  }
-
-  if (bn < BigInt(0)) {
-    // Set the top bit
-    u8[0] |= 0x80;
-  }
-
-  return Buffer.from(u8);
-};
-
-// Helper used in SCVal conversion
-const bigNumberFromBytes = (
-  signed: boolean,
-  ...bytes: (string | number | bigint)[]
-): BigNumber => {
-  let sign = 1;
-  if (signed && bytes[0] === 0x80) {
-    // top bit is set, negative number.
-    sign = -1;
-    bytes[0] &= 0x7f;
-  }
-  let b = BigInt(0);
-  for (const byte of bytes) {
-    b <<= BigInt(8);
-    b |= BigInt(byte);
-  }
-  return BigNumber(b.toString()).multipliedBy(sign);
-};
-
 // Can be used whenever you need an Address argument for a contract method
 export const accountToScVal = (account: string) =>
   new Address(account).toScVal();
 
-  // Can be used whenever you need an i128 argument for a contract method
-export const numberToI128 = (value: number): xdr.ScVal => {
-  const bigValue = BigNumber(value);
-  const b: bigint = BigInt(bigValue.toFixed(0));
-  const buf = bigintToBuf(b);
-  if (buf.length > 16) {
-    throw new Error("BigNumber overflows i128");
-  }
-
-  if (bigValue.isNegative()) {
-    // Clear the top bit
-    buf[0] &= 0x7f;
-  }
-
-  // left-pad with zeros up to 16 bytes
-  const padded = Buffer.alloc(16);
-  buf.copy(padded, padded.length - buf.length);
-  console.debug({ value: value.toString(), padded });
-
-  if (bigValue.isNegative()) {
-    // Set the top bit
-    padded[0] |= 0x80;
-  }
-
-  const hi = new xdr.Int64(
-    bigNumberFromBytes(false, ...padded.slice(4, 8)).toNumber(),
-    bigNumberFromBytes(false, ...padded.slice(0, 4)).toNumber(),
-  );
-  const lo = new xdr.Uint64(
-    bigNumberFromBytes(false, ...padded.slice(12, 16)).toNumber(),
-    bigNumberFromBytes(false, ...padded.slice(8, 12)).toNumber(),
-  );
-
-  return xdr.ScVal.scvI128(new xdr.Int128Parts({ lo, hi }));
-};
+// Can be used whenever you need an i128 argument for a contract method
+export const numberToI128 = (value: number): xdr.ScVal =>
+  nativeToScVal(value, { type: "i128" });
 
 // Given a display value for a token and a number of decimals, return the correspding BigNumber
 export const parseTokenAmount = (value: string, decimals: number) => {
@@ -204,7 +93,7 @@ export const getServer = (networkDetails: NetworkDetails) =>
     allowHttp: networkDetails.networkUrl.startsWith("http://"),
   });
 
-  // Get a TransactionBuilder configured with our public key
+// Get a TransactionBuilder configured with our public key
 export const getTxBuilder = async (
   pubKey: string,
   fee: string,
@@ -222,15 +111,22 @@ export const getTxBuilder = async (
 //  Used in getTokenSymbol, getTokenName, and getTokenDecimals
 export const simulateTx = async <ArgType>(
   tx: Transaction<Memo<MemoType>, Operation[]>,
-  decoder: (xdr: string) => ArgType,
   server: Server,
-) => {
+): Promise<ArgType> => {
   const { results } = await server.simulateTransaction(tx);
   if (!results || results.length !== 1) {
     throw new Error("Invalid response from simulateTransaction");
   }
   const result = results[0];
-  return decoder(result.xdr);
+  const scVal = xdr.ScVal.fromXDR(result.xdr, "base64");
+  let convertedScVal: any;
+  try {
+    convertedScVal = scVal.str().toString();
+    return convertedScVal;
+  } catch (e) {
+    console.error(e);
+  }
+  return scValToNative(scVal);
 };
 
 // Build and submits a transaction to the Soroban RPC
@@ -283,7 +179,7 @@ export const getTokenSymbol = async (
     .setTimeout(TimeoutInfinite)
     .build();
 
-  const result = await simulateTx<string>(tx, decoders.bytesN, server);
+  const result = await simulateTx<string>(tx, server);
   return result;
 };
 
@@ -299,7 +195,7 @@ export const getTokenName = async (
     .setTimeout(TimeoutInfinite)
     .build();
 
-  const result = await simulateTx<string>(tx, decoders.bytesN, server);
+  const result = await simulateTx<string>(tx, server);
   return result;
 };
 
@@ -315,7 +211,7 @@ export const getTokenDecimals = async (
     .setTimeout(TimeoutInfinite)
     .build();
 
-  const result = await simulateTx<number>(tx, decoders.u32, server);
+  const result = await simulateTx<number>(tx, server);
   return result;
 };
 
@@ -379,16 +275,16 @@ export const getEstimatedFee = async (
 ) => {
   const contract = new Contract(tokenId);
   const tx = txBuilder
-  .addOperation(
-    contract.call(
-      "mint",
-      ...[
-        accountToScVal(destinationPubKey), // to
-        numberToI128(quantity), // quantity
-      ],
-    ),
-  )
-  .setTimeout(TimeoutInfinite);
+    .addOperation(
+      contract.call(
+        "mint",
+        ...[
+          accountToScVal(destinationPubKey), // to
+          numberToI128(quantity), // quantity
+        ],
+      ),
+    )
+    .setTimeout(TimeoutInfinite);
 
   if (memo.length > 0) {
     tx.addMemo(Memo.text(memo));
