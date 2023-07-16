@@ -16,7 +16,7 @@ import {
   ISupportedWallet,
 } from "stellar-wallets-kit";
 
-import { stroopToXlm } from "helpers/format";
+import { stroopToXlm } from "../../helpers/format";
 import { FUTURENET_DETAILS } from "../../helpers/network";
 import { ERRORS } from "../../helpers/error";
 import {
@@ -72,7 +72,7 @@ export const MintToken = (props: MintTokenProps) => {
   const [signedXdr, setSignedXdr] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-   // 2 basic loading states for now
+  // 2 basic loading states for now
   const [isLoadingTokenDetails, setIsLoadingTokenDetails] =
     React.useState<boolean>(false);
   const [isGettingFee, setIsGettingFee] = React.useState(false);
@@ -168,7 +168,7 @@ export const MintToken = (props: MintTokenProps) => {
     }
   };
 
-   // This uses the StepCount tro render to currently active step in the payment flow
+  // This uses the StepCount tro render to currently active step in the payment flow
   function renderStep(step: StepCount) {
     switch (step) {
       case 8: {
@@ -176,7 +176,7 @@ export const MintToken = (props: MintTokenProps) => {
         return <TxResult onClick={onClick} resultXDR={txResultXDR} />;
       }
       case 7: {
-         // Uses state saved from previous steps in order to submit a transaction to the network
+        // Uses state saved from previous steps in order to submit a transaction to the network
         const submit = async () => {
           const server = getServer(selectedNetwork);
 

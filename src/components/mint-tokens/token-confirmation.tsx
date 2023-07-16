@@ -1,9 +1,14 @@
 import React from "react";
 import { Button, Heading, Profile } from "@stellar/design-system";
 import { StellarWalletsKit } from "stellar-wallets-kit";
-import { xlmToStroop } from "helpers/format";
+import { xlmToStroop } from "../../helpers/format";
 import { NetworkDetails, signTx } from "../../helpers/network";
-import { mintTokens, getTxBuilder, getServer, parseTokenAmount } from "../../helpers/soroban";
+import {
+  mintTokens,
+  getTxBuilder,
+  getServer,
+  parseTokenAmount,
+} from "../../helpers/soroban";
 import { ERRORS } from "../../helpers/error";
 
 interface ConfirmMintTxProps {
@@ -27,7 +32,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
     const quantity = parseTokenAmount(props.quantity, props.tokenDecimals);
     // Get an instance of a Soroban RPC set to the selected network
     const server = getServer(props.networkDetails);
-     // Gets a transaction builder and use it to add a "mint" operation and build the corresponding XDR
+    // Gets a transaction builder and use it to add a "mint" operation and build the corresponding XDR
     const txBuilderAdmin = await getTxBuilder(
       props.pubKey,
       xlmToStroop(props.fee).toString(),
@@ -46,7 +51,7 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
     });
 
     try {
-       // Signs XDR representing the "mint" transaction
+      // Signs XDR representing the "mint" transaction
       const signedTx = await signTx(xdr, props.pubKey, props.kit);
       props.onTxSign(signedTx);
     } catch (e) {
