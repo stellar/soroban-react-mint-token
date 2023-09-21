@@ -107,7 +107,10 @@ export const simulateTx = async <ArgType>(
 ): Promise<ArgType> => {
   const response = await server.simulateTransaction(tx);
 
-  if ("result" in response && response.result !== undefined) {
+  if (
+    SorobanRpc.isSimulationSuccess(response) &&
+    response.result !== undefined
+  ) {
     return scValToNative(response.result.retval);
   }
 
@@ -278,11 +281,14 @@ export const getEstimatedFee = async (
   const raw = tx.build();
 
   const simResponse = await server.simulateTransaction(raw);
-  if ("error" in simResponse) {
+  if (SorobanRpc.isSimulationError(simResponse)) {
     throw simResponse.error;
   }
 
-  if (!("result" in simResponse)) {
+  if (
+    SorobanRpc.isSimulationSuccess(simResponse) &&
+    simResponse.result !== undefined
+  ) {
     throw new Error("transaction simulation failed");
   }
 
