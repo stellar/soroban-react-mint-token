@@ -1,14 +1,10 @@
 import React from "react";
 import { Button, Heading, Profile } from "@stellar/design-system";
+import Soroban from "soroban-client";
 import { StellarWalletsKit } from "stellar-wallets-kit";
 import { xlmToStroop } from "../../helpers/format";
 import { NetworkDetails, signTx } from "../../helpers/network";
-import {
-  mintTokens,
-  getTxBuilder,
-  getServer,
-  parseTokenAmount,
-} from "../../helpers/soroban";
+import { mintTokens, getTxBuilder, getServer } from "../../helpers/soroban";
 import { ERRORS } from "../../helpers/error";
 
 interface ConfirmMintTxProps {
@@ -29,7 +25,10 @@ interface ConfirmMintTxProps {
 export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
   const signWithFreighter = async () => {
     // Need to use the perviously fetched token decimals to properly display the quantity value
-    const quantity = parseTokenAmount(props.quantity, props.tokenDecimals);
+    const quantity = Soroban.parseTokenAmount(
+      props.quantity,
+      props.tokenDecimals,
+    );
     // Get an instance of a Soroban RPC set to the selected network
     const server = getServer(props.networkDetails);
     // Gets a transaction builder and use it to add a "mint" operation and build the corresponding XDR
