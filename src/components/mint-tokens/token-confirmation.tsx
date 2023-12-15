@@ -47,7 +47,6 @@ export const ConfirmMintTx = (props: ConfirmMintTxProps) => {
       memo: props.memo,
       txBuilderAdmin,
       server,
-      networkPassphrase: props.networkDetails.networkPassphrase,
     });
 
     try {
