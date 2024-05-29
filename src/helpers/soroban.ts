@@ -33,7 +33,7 @@ export const SendTxStatus: {
 export const XLM_DECIMALS = 7;
 
 export const RPC_URLS: { [key: string]: string } = {
-  FUTURENET: "https://rpc-futurenet.stellar.org/",
+  TESTNET: "https://soroban-testnet.stellar.org/",
 };
 
 // Can be used whenever you need an Address argument for a contract method
@@ -279,13 +279,6 @@ export const getEstimatedFee = async (
   const simResponse = await server.simulateTransaction(raw);
   if (SorobanRpc.Api.isSimulationError(simResponse)) {
     throw simResponse.error;
-  }
-
-  if (
-    SorobanRpc.Api.isSimulationSuccess(simResponse) &&
-    simResponse.result !== undefined
-  ) {
-    throw new Error("transaction simulation failed");
   }
 
   // 'classic' tx fees are measured as the product of tx.fee * 'number of operations', In soroban contract tx,
